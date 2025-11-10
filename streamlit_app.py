@@ -104,7 +104,7 @@ if uploaded_files:
     st.sidebar.success(f" {len(all_chunks)} chunks prepared from uploaded PDFs (ready for indexing).")
 
 # --- Sidebar: Rebuild Pinecone Index ---
-if st.sidebar.button("🔄 Rebuild Pinecone Index"):
+if st.sidebar.button(" Rebuild Pinecone Index"):
     if not all_chunks:
         st.sidebar.warning("No new PDFs uploaded. Please upload files first.")
     else:
@@ -153,5 +153,6 @@ if st.button(" Retrieve & Generate Answer"):
         st.success(answer)
 
 st.markdown("---")
+
 
 
