@@ -9,7 +9,7 @@ from huggingface_hub import InferenceClient
 from tqdm import tqdm
 import tempfile
 
-# --- Load environment ---
+
 load_dotenv()
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
@@ -17,12 +17,11 @@ HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 PINECONE_REGION = os.getenv("PINECONE_REGION", "us-east-1")
 PINECONE_METRIC = os.getenv("PINECONE_METRIC", "cosine")
 
-# --- Streamlit UI Config ---
 st.set_page_config(page_title="GRC RAG Assistant", layout="wide")
 st.title(" Global GRC RAG Assistant")
 st.markdown("Ask compliance or governance-related questions across multiple country policy PDFs.")
 
-# --- Cache Initialization ---
+
 @st.cache_resource
 def init_retriever():
     embeddings = HuggingFaceEmbeddings(model_name="intfloat/e5-base-v2")
@@ -51,7 +50,9 @@ def init_retriever():
 
 retriever, embeddings, pc, vectorstore = init_retriever()
 
-# --- LLM Setup ---
+
+
+
 @st.cache_resource
 def init_llm():
     return InferenceClient(model="mistralai/Mistral-7B-Instruct-v0.2", token=HUGGINGFACEHUB_API_TOKEN)
@@ -59,7 +60,8 @@ def init_llm():
 
 llm_client = init_llm()
 
-# --- Mistral Conversation ---
+
+
 def mistral_conversation(question, context_docs):
     context_text = "\n\n".join([getattr(d, "page_content", str(d)) for d in context_docs])
     messages = [
@@ -81,11 +83,16 @@ def mistral_conversation(question, context_docs):
     except Exception as e:
         return f" LLM Error: {e}"
 
-# --- Sidebar: Upload & Index ---
+
+
+
+
 st.sidebar.header(" Upload Policy PDFs")
 uploaded_files = st.sidebar.file_uploader("Upload multiple PDFs", type="pdf", accept_multiple_files=True)
 
-# Prepare upload temp dir
+
+
+
 temp_dir = tempfile.mkdtemp()
 all_chunks = []
 
@@ -103,7 +110,8 @@ if uploaded_files:
         all_chunks.extend(chunks)
     st.sidebar.success(f" {len(all_chunks)} chunks prepared from uploaded PDFs (ready for indexing).")
 
-# --- Sidebar: Rebuild Pinecone Index ---
+
+
 if st.sidebar.button(" Rebuild Pinecone Index"):
     if not all_chunks:
         st.sidebar.warning("No new PDFs uploaded. Please upload files first.")
@@ -132,7 +140,7 @@ if st.sidebar.button(" Rebuild Pinecone Index"):
             except Exception as e:
                 st.sidebar.error(f"Error rebuilding index: {e}")
 
-# --- Main QA Interface ---
+
 st.header(" Ask a Question")
 user_query = st.text_input("Enter your question here")
 
@@ -153,6 +161,7 @@ if st.button(" Retrieve & Generate Answer"):
         st.success(answer)
 
 st.markdown("---")
+
 
 
 
