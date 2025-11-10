@@ -31,6 +31,8 @@ PINECONE_REGION = os.getenv("PINECONE_REGION", "us-east-1")
 PINECONE_METRIC = os.getenv("PINECONE_METRIC", "cosine")
 HUGGINGFACEHUB_API_TOKEN = require_env("HUGGINGFACEHUB_API_TOKEN")
 
+
+#PDF LOad
 PDF_DIR = Path(r"D:\LC GRC RAG\pdf")  
 
 if not PDF_DIR.exists():
@@ -58,10 +60,10 @@ print(f" Split into {len(chunks)} chunks total")
 
 
 
-
+#Embeddings
 
 embeddings = HuggingFaceEmbeddings(model_name="intfloat/e5-base-v2")
-
+#Pinecone
 pc = PineconeClient(api_key=PINECONE_API_KEY)
 existing_indexes = pc.list_indexes().names()
 
@@ -81,13 +83,13 @@ print(f" Connected to Pinecone index: {PINECONE_INDEX_NAME}")
 
 
 
-
+#Vectors
 vectorstore = PineconeVectorStore.from_existing_index(
     index_name=PINECONE_INDEX_NAME,
     embedding=embeddings,
 )
 print(" LangChain vectorstore connected to Pinecone index")
-
+#Upload if empty
 stats = index.describe_index_stats()
 if stats.total_vector_count == 0:
     print(" Uploading document chunks to Pinecone (first-time setup)...")
@@ -98,12 +100,12 @@ else:
     print(f"ℹ Pinecone already has {stats.total_vector_count} vectors.")
 
 
-
+#Retriever
 retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 print(" Retriever created (k=3)")
 
 
-
+#LLM
 llm_client = InferenceClient(
     model="mistralai/Mistral-7B-Instruct-v0.2",
     token=HUGGINGFACEHUB_API_TOKEN,
@@ -111,7 +113,7 @@ llm_client = InferenceClient(
 print(" Mistral LLM initialized successfully")
 
 
-
+#
 def mistral_conversation(inputs):
     docs = inputs.get("context", [])
     if not docs:
@@ -153,7 +155,7 @@ def mistral_conversation(inputs):
 
 
 
-
+#Query
 while True:
     user_query = input("\n Ask a question (or type 'exit' to quit): ").strip()
     if user_query.lower() in ["exit", "quit", "q"]:
@@ -176,9 +178,8 @@ while True:
 
 
 
+#Dataset
 print("\n Building evaluation dataset...")
-
-
 page_map = {}
 for d in all_docs:
     p = d.metadata.get("page")
@@ -302,4 +303,5 @@ final_df = pd.merge(df, gen_df, on="question")
 print("\n  Overall RAG Evaluation Summary ")
 print(final_df.to_string(index=False))
 print(" ")
+
 
