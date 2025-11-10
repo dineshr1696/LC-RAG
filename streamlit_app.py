@@ -5,9 +5,7 @@ from pathlib import Path
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from huggingface_hub import InferenceClient
-from pinecone import Pinecone, ServerlessSpec
 from tqdm import tqdm
 import tempfile
 
@@ -21,7 +19,7 @@ PINECONE_METRIC = os.getenv("PINECONE_METRIC", "cosine")
 
 # --- Streamlit UI Config ---
 st.set_page_config(page_title="GRC RAG Assistant", layout="wide")
-st.title("🌍 Global GRC RAG Assistant")
+st.title(" Global GRC RAG Assistant")
 st.markdown("Ask compliance or governance-related questions across multiple country policy PDFs.")
 
 # --- Cache Initialization ---
@@ -40,9 +38,9 @@ def init_retriever():
             metric=PINECONE_METRIC,
             spec=ServerlessSpec(cloud="aws", region=PINECONE_REGION),
         )
-        st.info(f"✅ Created new Pinecone index: {PINECONE_INDEX_NAME}")
+        st.info(f" Created new Pinecone index: {PINECONE_INDEX_NAME}")
     else:
-        st.info(f"✅ Using existing Pinecone index: {PINECONE_INDEX_NAME}")
+        st.info(f" Using existing Pinecone index: {PINECONE_INDEX_NAME}")
 
     vectorstore = PineconeVectorStore.from_existing_index(
         PINECONE_INDEX_NAME, embedding=embeddings
@@ -84,7 +82,7 @@ def mistral_conversation(question, context_docs):
         return f" LLM Error: {e}"
 
 # --- Sidebar: Upload & Index ---
-st.sidebar.header("📂 Upload Policy PDFs")
+st.sidebar.header(" Upload Policy PDFs")
 uploaded_files = st.sidebar.file_uploader("Upload multiple PDFs", type="pdf", accept_multiple_files=True)
 
 # Prepare upload temp dir
@@ -103,7 +101,7 @@ if uploaded_files:
         splitter = RecursiveCharacterTextSplitter(chunk_size=900, chunk_overlap=150)
         chunks = splitter.split_documents(docs)
         all_chunks.extend(chunks)
-    st.sidebar.success(f"✅ {len(all_chunks)} chunks prepared from uploaded PDFs (ready for indexing).")
+    st.sidebar.success(f" {len(all_chunks)} chunks prepared from uploaded PDFs (ready for indexing).")
 
 # --- Sidebar: Rebuild Pinecone Index ---
 if st.sidebar.button("🔄 Rebuild Pinecone Index"):
@@ -113,10 +111,10 @@ if st.sidebar.button("🔄 Rebuild Pinecone Index"):
         with st.spinner("Rebuilding Pinecone index... this may take a few minutes."):
             try:
                 if PINECONE_INDEX_NAME in pc.list_indexes().names():
-                    st.sidebar.info(f"🗑️ Deleting existing index '{PINECONE_INDEX_NAME}'...")
+                    st.sidebar.info(f" Deleting existing index '{PINECONE_INDEX_NAME}'...")
                     pc.delete_index(PINECONE_INDEX_NAME)
 
-                st.sidebar.info("🆕 Creating new index...")
+                st.sidebar.info(" Creating new index...")
                 pc.create_index(
                     name=PINECONE_INDEX_NAME,
                     dimension=768,
@@ -124,21 +122,21 @@ if st.sidebar.button("🔄 Rebuild Pinecone Index"):
                     spec=ServerlessSpec(cloud="aws", region=PINECONE_REGION),
                 )
 
-                st.sidebar.info("🚀 Uploading document chunks...")
+                st.sidebar.info(" Uploading document chunks...")
                 new_vectorstore = PineconeVectorStore.from_existing_index(
                     PINECONE_INDEX_NAME, embedding=embeddings
                 )
                 for i in tqdm(range(0, len(all_chunks), 5)):
                     new_vectorstore.add_documents(all_chunks[i:i + 5])
-                st.sidebar.success("✅ Index rebuilt successfully!")
+                st.sidebar.success(" Index rebuilt successfully!")
             except Exception as e:
                 st.sidebar.error(f"Error rebuilding index: {e}")
 
 # --- Main QA Interface ---
-st.header("💬 Ask a Question")
+st.header(" Ask a Question")
 user_query = st.text_input("Enter your question here")
 
-if st.button("🔍 Retrieve & Generate Answer"):
+if st.button(" Retrieve & Generate Answer"):
     if not user_query.strip():
         st.warning("Please enter a question.")
     else:
@@ -146,13 +144,14 @@ if st.button("🔍 Retrieve & Generate Answer"):
             retrieved_docs = retriever.invoke(user_query)
             answer = mistral_conversation(user_query, retrieved_docs)
 
-        st.subheader("📘 Retrieved Context")
+        st.subheader(" Retrieved Context")
         for i, doc in enumerate(retrieved_docs):
             st.markdown(f"**Match {i+1}:** {doc.metadata.get('source', 'Unknown PDF')}")
             st.text_area(f"Snippet {i+1}", doc.page_content[:700] + "...", height=150)
 
-        st.subheader("🧠 Model Answer")
+        st.subheader(" Model Answer")
         st.success(answer)
 
 st.markdown("---")
-st.caption("Developed by Dinesh R | Powered by LangChain ⚡ Pinecone ⚡ Mistral 7B")
+
+
