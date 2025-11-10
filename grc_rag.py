@@ -1,15 +1,23 @@
-# rag_pipeline.py
 import os
 from dotenv import load_dotenv
 from pathlib import Path
 import sys
 from tqdm import tqdm
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from huggingface_hub import InferenceClient
+from langchain_pinecone import PineconeVectorStore
+from pinecone import Pinecone as PineconeClient, ServerlessSpec
+from langchain_huggingface import HuggingFaceEndpoint
+from sklearn.metrics.pairwise import cosine_similarity
+import pandas as pd
+import numpy as np
+from datasets import Dataset
 
-# Load .env
 load_dotenv()
 os.environ["OPENAI_API_KEY"] = "dummy-key"
 
-# -------------------- Basic checks --------------------
 def require_env(name: str):
     v = os.getenv(name)
     if not v:
@@ -23,18 +31,7 @@ PINECONE_REGION = os.getenv("PINECONE_REGION", "us-east-1")
 PINECONE_METRIC = os.getenv("PINECONE_METRIC", "cosine")
 HUGGINGFACEHUB_API_TOKEN = require_env("HUGGINGFACEHUB_API_TOKEN")
 
-# -------------------- Imports --------------------
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from huggingface_hub import InferenceClient
-from langchain_pinecone import PineconeVectorStore
-from pinecone import Pinecone as PineconeClient, ServerlessSpec
-from langchain_huggingface import HuggingFaceEndpoint
-
-
-# -------------------- Load PDF --------------------
-PDF_DIR = Path(r"D:\LC GRC RAG\pdf")  # <-- your actual folder path
+PDF_DIR = Path(r"D:\LC GRC RAG\pdf")  
 
 if not PDF_DIR.exists():
     print(f" Folder not found: {PDF_DIR}")
@@ -47,22 +44,24 @@ for pdf_file in PDF_DIR.glob("*.pdf"):
         loader = PyPDFLoader(str(pdf_file))
         docs = loader.load()
         for d in docs:
-            d.metadata["source"] = pdf_file.name  # keep track of which PDF it came from
+            d.metadata["source"] = pdf_file.name  
         all_docs.extend(docs)
     except Exception as e:
         print(f" Error loading {pdf_file.name}: {e}")
 
 print(f" Loaded {len(all_docs)} total pages from {len(list(PDF_DIR.glob('*.pdf')))} PDFs")
-
 splitter = RecursiveCharacterTextSplitter(chunk_size=900, chunk_overlap=150)
 chunks = splitter.split_documents(all_docs)
 print(f" Split into {len(chunks)} chunks total")
 
 
-# -------------------- Embeddings --------------------
+
+
+
+
+
 embeddings = HuggingFaceEmbeddings(model_name="intfloat/e5-base-v2")
 
-# -------------------- Pinecone Setup --------------------
 pc = PineconeClient(api_key=PINECONE_API_KEY)
 existing_indexes = pc.list_indexes().names()
 
@@ -80,14 +79,15 @@ else:
 index = pc.Index(PINECONE_INDEX_NAME)
 print(f" Connected to Pinecone index: {PINECONE_INDEX_NAME}")
 
-# -------------------- Vectorstore --------------------
+
+
+
 vectorstore = PineconeVectorStore.from_existing_index(
     index_name=PINECONE_INDEX_NAME,
     embedding=embeddings,
 )
 print(" LangChain vectorstore connected to Pinecone index")
 
-# -------------------- Upload if empty --------------------
 stats = index.describe_index_stats()
 if stats.total_vector_count == 0:
     print(" Uploading document chunks to Pinecone (first-time setup)...")
@@ -97,18 +97,21 @@ if stats.total_vector_count == 0:
 else:
     print(f"ℹ Pinecone already has {stats.total_vector_count} vectors.")
 
-# -------------------- Retriever --------------------
+
+
 retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 print(" Retriever created (k=3)")
 
-# -------------------- LLM --------------------
+
+
 llm_client = InferenceClient(
     model="mistralai/Mistral-7B-Instruct-v0.2",
     token=HUGGINGFACEHUB_API_TOKEN,
 )
 print(" Mistral LLM initialized successfully")
 
-# -------------------- RAG Logic --------------------
+
+
 def mistral_conversation(inputs):
     docs = inputs.get("context", [])
     if not docs:
@@ -148,7 +151,8 @@ def mistral_conversation(inputs):
         print(f" LLM error: {e}")
         return " LLM inference failed."
 
-# -------------------- Query Loop --------------------
+
+
 
 while True:
     user_query = input("\n Ask a question (or type 'exit' to quit): ").strip()
@@ -163,23 +167,18 @@ while True:
 
         result = mistral_conversation({"question": user_query, "context": retrieved_docs})
 
-        print("\n----- ANSWER START -----")
+        print("\n----- ANSWER START ---")
         print(result)
-        print("------ ANSWER END ------\n")
+        print("----- ANSWER END ----\n")
 
     except Exception as e:
         print(f" Error during query: {e}")
 
-from sklearn.metrics.pairwise import cosine_similarity
-import pandas as pd
-import numpy as np
 
-# -------------------- Build Evaluation Dataset --------------------
-from datasets import Dataset
 
 print("\n Building evaluation dataset...")
 
-# Map each PDF page to its text
+
 page_map = {}
 for d in all_docs:
     p = d.metadata.get("page")
@@ -187,7 +186,7 @@ for d in all_docs:
     key = f"{source}_page_{p}"
     page_map[key] = d.page_content
 
-# Define evaluation questions and their gold-standard answers
+
 eval_items = [
     {
         "question": "What are the NRI investment limits in private sector banks?",
@@ -202,7 +201,7 @@ eval_items = [
 
 ]
 
-# Build structured dataset entries
+
 eval_data = {"question": [], "contexts": [], "answer": [], "reference": []}
 
 for item in eval_items:
@@ -237,7 +236,7 @@ def context_recall(retrieved_contexts, reference):
     combined = " ".join(retrieved_contexts)
     return cosine_sim(combined, reference)
 
-from datasets import Dataset
+
 
 results = []
 for i in range(len(dataset)):
@@ -249,9 +248,9 @@ for i in range(len(dataset)):
     results.append({"question": q, "context_precision": prec, "context_recall": rec})
 
 df = pd.DataFrame(results)
-print("\n===================  Retriever Evaluation ===================")
+print("\n  Retriever Evaluation ")
 print(df.to_string(index=False))
-print("===================================================================")
+print(" ")
 
 print("\n Evaluating Generator Quality (faithfulness & answer relevance)...")
 
@@ -295,11 +294,12 @@ for i in range(len(dataset)):
     gen_metrics.append({"question": q, "faithfulness": f, "answer_relevance": a})
 
 gen_df = pd.DataFrame(gen_metrics)
-print("\n===================  Generator Evaluation ===================")
+print("\n  Generator Evaluation ")
 print(gen_df.to_string(index=False))
-print("===================================================================")
+print(" ")
 
 final_df = pd.merge(df, gen_df, on="question")
-print("\n===================  Overall RAG Evaluation Summary ===================")
+print("\n  Overall RAG Evaluation Summary ")
 print(final_df.to_string(index=False))
-print("===================================================================")
+print(" ")
+
