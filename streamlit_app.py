@@ -9,7 +9,7 @@ from huggingface_hub import InferenceClient
 from tqdm import tqdm
 import tempfile
 
-
+#Load environmen
 load_dotenv()
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
@@ -17,11 +17,12 @@ HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 PINECONE_REGION = os.getenv("PINECONE_REGION", "us-east-1")
 PINECONE_METRIC = os.getenv("PINECONE_METRIC", "cosine")
 
+#Streamlit  Config
 st.set_page_config(page_title="GRC RAG Assistant", layout="wide")
 st.title(" Global GRC RAG Assistant")
 st.markdown("Ask compliance or governance-related questions across multiple country policy PDFs.")
 
-
+#embeddings & vector
 @st.cache_resource
 def init_retriever():
     embeddings = HuggingFaceEmbeddings(model_name="intfloat/e5-base-v2")
@@ -52,7 +53,7 @@ retriever, embeddings, pc, vectorstore = init_retriever()
 
 
 
-
+#LLM
 @st.cache_resource
 def init_llm():
     return InferenceClient(model="mistralai/Mistral-7B-Instruct-v0.2", token=HUGGINGFACEHUB_API_TOKEN)
@@ -61,7 +62,7 @@ def init_llm():
 llm_client = init_llm()
 
 
-
+#mistral_conversation
 def mistral_conversation(question, context_docs):
     context_text = "\n\n".join([getattr(d, "page_content", str(d)) for d in context_docs])
     messages = [
@@ -86,13 +87,13 @@ def mistral_conversation(question, context_docs):
 
 
 
-
+#Upload 
 st.sidebar.header(" Upload Policy PDFs")
 uploaded_files = st.sidebar.file_uploader("Upload multiple PDFs", type="pdf", accept_multiple_files=True)
 
 
 
-
+#Prepare upload tempdir
 temp_dir = tempfile.mkdtemp()
 all_chunks = []
 
@@ -140,7 +141,7 @@ if st.sidebar.button(" Rebuild Pinecone Index"):
             except Exception as e:
                 st.sidebar.error(f"Error rebuilding index: {e}")
 
-
+#Main QA
 st.header(" Ask a Question")
 user_query = st.text_input("Enter your question here")
 
@@ -161,6 +162,7 @@ if st.button(" Retrieve & Generate Answer"):
         st.success(answer)
 
 st.markdown("---")
+
 
 
 
