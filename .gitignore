@@ -5,7 +5,6 @@ __pycache__/
 .idea/
 
 # Local PDFs
-pdf/
 sample_pdf/
 temp/
 
