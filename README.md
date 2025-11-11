@@ -1,3 +1,4 @@
+
 #  Global GRC RAG Assistant
 
 An AI-powered Retrieval-Augmented Generation (RAG) assistant that answers governance, risk, and compliance (GRC) questions using country-specific policy PDFs.
@@ -14,8 +15,4 @@ An AI-powered Retrieval-Augmented Generation (RAG) assistant that answers govern
 - **Vector DB:** Pinecone  
 - **Framework:** LangChain + Streamlit
 
-##  Setup Instructions
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/<your-username>/grc-rag-assistant.git
-   cd grc-rag-assistant
+
