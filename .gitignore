@@ -1,0 +1,18 @@
+# Environment folders
+.myenv/
+__pycache__/
+.vscode/
+.idea/
+
+# Local PDFs
+pdf/
+sample_pdf/
+temp/
+
+# Sensitive info
+.env
+*.key
+*.json
+
+# Streamlit cache
+.streamlit/
